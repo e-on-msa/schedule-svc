@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const School = sequelize.define(
         "School",
         {
-            school_id: {
+            id: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,
@@ -46,7 +46,6 @@ module.exports = (sequelize, DataTypes) => {
     School.associate = (models) => {
         School.belongsTo(models.Region, {
             foreignKey: "region_id",
-            targetKey: "region_id",
             as: "region",
         });
     };

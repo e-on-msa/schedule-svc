@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const Region = sequelize.define(
         "Region",
         {
-            region_id: {
+            id: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,
@@ -26,13 +26,11 @@ module.exports = (sequelize, DataTypes) => {
     Region.associate = (models) => {
         Region.hasMany(models.School, {
             foreignKey: "region_id",
-            sourceKey: "region_id",
             as: "schools",
         });
 
         Region.hasMany(models.AverageAcademicSchedule, {
             foreignKey: "region_id",
-            sourceKey: "region_id",
             as: "averageSchedules",
         });
     };

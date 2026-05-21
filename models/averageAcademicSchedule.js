@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const AverageAcademicSchedule = sequelize.define(
         "AverageAcademicSchedule",
         {
-            average_academic_schedule_id: {
+            id: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,
@@ -82,7 +82,6 @@ module.exports = (sequelize, DataTypes) => {
     AverageAcademicSchedule.associate = (models) => {
         AverageAcademicSchedule.belongsTo(models.Region, {
             foreignKey: "region_id",
-            targetKey: "region_id",
             as: "region",
         });
     };
