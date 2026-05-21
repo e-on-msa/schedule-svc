@@ -19,6 +19,12 @@ async function fetchSchoolSchedulesFromNeis({
     fromYmd,
     toYmd,
 }) {
+    const apiKey = process.env.NEIS_API_KEY;
+
+    if (!apiKey) {
+        throw new Error("NEIS API 키가 설정되지 않았습니다.");
+    }
+
     if (!atptCode || !schoolCode || !fromYmd || !toYmd) {
         throw new Error(
             "NEIS 학사일정 조회에 필요한 atptCode, schoolCode, fromYmd, toYmd가 필요합니다.",
@@ -27,7 +33,7 @@ async function fetchSchoolSchedulesFromNeis({
 
     const { data } = await axios.get(NEIS_SCHOOL_SCHEDULE_URL, {
         params: {
-            KEY: process.env.NEIS_API_KEY,
+            KEY: apiKey,
             Type: "json",
             ATPT_OFCDC_SC_CODE: atptCode,
             SD_SCHUL_CODE: schoolCode,
