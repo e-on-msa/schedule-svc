@@ -2,8 +2,34 @@
 const axios = require("axios");
 
 const NEIS_SCHOOL_SCHEDULE_URL = "https://open.neis.go.kr/hub/SchoolSchedule";
+const NEIS_EMPTY_RESULT_CODE = "INFO-200";
+
+function getNeisResult(responseData) {
+    return (
+        responseData?.RESULT ||
+        responseData?.SchoolSchedule?.[0]?.head?.[1]?.RESULT
+    );
+}
+
+function assertValidNeisResponse(responseData) {
+    const result = getNeisResult(responseData);
+
+    if (!result) {
+        return;
+    }
+
+    const { CODE, MESSAGE } = result;
+
+    if (CODE === NEIS_EMPTY_RESULT_CODE) {
+        return;
+    }
+
+    throw new Error(`NEIS API 오류: ${CODE} - ${MESSAGE}`);
+}
 
 function extractRows(responseData) {
+    assertValidNeisResponse(responseData);
+
     const rows = responseData?.SchoolSchedule?.[1]?.row;
 
     if (!Array.isArray(rows)) {
