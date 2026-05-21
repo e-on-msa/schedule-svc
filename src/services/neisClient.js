@@ -3,6 +3,7 @@ const axios = require("axios");
 
 const NEIS_SCHOOL_SCHEDULE_URL = "https://open.neis.go.kr/hub/SchoolSchedule";
 const NEIS_EMPTY_RESULT_CODE = "INFO-200";
+const NEIS_SUCCESS_RESULT_CODE = "INFO-000";
 
 function getNeisResult(responseData) {
     return (
@@ -20,7 +21,7 @@ function assertValidNeisResponse(responseData) {
 
     const { CODE, MESSAGE } = result;
 
-    if (CODE === NEIS_EMPTY_RESULT_CODE) {
+    if (CODE === NEIS_EMPTY_RESULT_CODE || CODE === NEIS_SUCCESS_RESULT_CODE) {
         return;
     }
 
