@@ -46,7 +46,6 @@ module.exports = (sequelize, DataTypes) => {
     School.associate = (models) => {
         School.belongsTo(models.Region, {
             foreignKey: "region_id",
-            targetKey: "region_id",
             as: "region",
         });
     };
