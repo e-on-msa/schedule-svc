@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const School = sequelize.define(
         "School",
         {
-            school_id: {
+            id: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,

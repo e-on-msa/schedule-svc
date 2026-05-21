@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const Region = sequelize.define(
         "Region",
         {
-            region_id: {
+            id: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,

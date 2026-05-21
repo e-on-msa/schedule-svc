@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const AverageAcademicSchedule = sequelize.define(
         "AverageAcademicSchedule",
         {
-            average_academic_schedule_id: {
+            id: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,
