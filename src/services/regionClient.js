@@ -29,14 +29,20 @@ async function fetchAllRegionsFromMolit() {
 
         const pack = data?.StanReginCd;
 
-        if (!Array.isArray(pack) || !pack[1]?.row) {
+        const rows = pack?.[1]?.row;
+        if (!Array.isArray(pack) || !Array.isArray(rows)) {
             throw new Error("행정표준코드 API 응답 형식이 예상과 다릅니다.");
         }
 
         const head = pack[0]?.head?.[0];
-        totalCount = Number.parseInt(head?.totalCount ?? "0", 10);
+        totalCount = Number.parseInt(head?.totalCount ?? "", 10);
+        if (!Number.isFinite(totalCount) || totalCount < 0) {
+            throw new Error(
+                "행정표준코드 API totalCount 값이 유효하지 않습니다.",
+            );
+        }
 
-        allRegions.push(...pack[1].row);
+        allRegions.push(...rows);
 
         if (allRegions.length >= totalCount) {
             break;
