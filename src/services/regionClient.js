@@ -44,6 +44,12 @@ async function fetchAllRegionsFromMolit() {
 
         allRegions.push(...rows);
 
+        if (rows.length === 0 && allRegions.length < totalCount) {
+            throw new Error(
+                "행정표준코드 API 응답이 비어 있어 동기화를 계속할 수 없습니다.",
+            );
+        }
+
         if (allRegions.length >= totalCount) {
             break;
         }
