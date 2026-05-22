@@ -2,7 +2,7 @@
 const axios = require("axios");
 
 const MOLIT_REGION_API_URL =
-    "http://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList";
+    "https://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList";
 
 async function fetchAllRegionsFromMolit() {
     const apiKey = process.env.MOLIT_API_KEY;
