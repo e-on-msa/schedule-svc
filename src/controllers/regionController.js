@@ -18,7 +18,8 @@ async function searchRegionsByName(req, res, next) {
     try {
         console.log("[region search query]", req.query);
 
-        const { name } = req.query;
+        const name =
+            typeof req.query.name === "string" ? req.query.name.trim() : "";
 
         const regions = name
             ? await regionSyncService.searchRegionsByName(name)
