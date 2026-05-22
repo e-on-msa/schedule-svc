@@ -24,11 +24,6 @@ module.exports = (sequelize, DataTypes) => {
     );
 
     Region.associate = (models) => {
-        Region.hasMany(models.School, {
-            foreignKey: "region_id",
-            as: "schools",
-        });
-
         Region.hasMany(models.AverageAcademicSchedule, {
             foreignKey: "region_id",
             as: "averageSchedules",
