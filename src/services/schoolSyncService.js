@@ -28,14 +28,13 @@ async function searchSchools(query) {
 }
 
 async function searchSchoolBySchoolCode(query) {
-    const rows = await School.findAll({
+    const rows = await School.findOne({
         where: {
             school_code: query,
         },
-        order: [["school_name", "ASC"]],
     });
 
-    return rows.map(toSchoolResponse);
+    return rows ? toSchoolResponse(rows) : null;
 }
 
 async function syncSchoolsFromNeis() {
