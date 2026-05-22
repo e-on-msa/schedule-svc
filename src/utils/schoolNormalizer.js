@@ -17,7 +17,6 @@ function normalizeSchool(rawSchool) {
         school_name: rawSchool.SCHUL_NM,
         address: rawSchool.ORG_RDNMA || rawSchool.ORG_RDNDA || null,
         school_type: schoolType || "UNKNOWN",
-        region_id: null,
     };
 }
 

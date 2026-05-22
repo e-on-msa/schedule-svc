@@ -71,7 +71,6 @@ async function syncSchoolsFromNeis() {
         await School.bulkCreate(normalizedSchools, {
             updateOnDuplicate: [
                 "atpt_code",
-                "region_id",
                 "school_name",
                 "address",
                 "school_type",
