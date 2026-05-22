@@ -1,18 +1,19 @@
 // schedule-svc/src/middlewares/requireInternalAccess.js
 function requireInternalAccess(req, res, next) {
     const secret = req.headers["x-internal-secret"];
+    const configuredSecret = process.env.INTERNAL_API_SECRET;
 
-    if (!secret) {
-        return res.status(403).json({
+    if (!configuredSecret) {
+        return res.status(500).json({
             success: false,
-            message: "Internal API access denied",
+            message: "Internal API secret is not configured",
         });
     }
 
-    if (secret !== process.env.INTERNAL_API_SECRET) {
+    if (!secret || secret !== configuredSecret) {
         return res.status(403).json({
             success: false,
-            message: "Invalid internal API secret",
+            message: "Internal API access denied",
         });
     }
 
