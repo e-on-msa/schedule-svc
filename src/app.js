@@ -25,7 +25,11 @@ app.use("/internal/regions", internalRegionRouter);
 app.use((err, req, res, next) => {
     console.error("[schedule-svc error]", err);
 
-    const status = Number(err.status || err.statusCode) || 500;
+    const rawStatus = Number(err.status ?? err.statusCode);
+    const status =
+        Number.isInteger(rawStatus) && rawStatus >= 400 && rawStatus < 600
+            ? rawStatus
+            : 500;
     return res.status(status).json({
         success: false,
         message: err.message || "Internal Server Error",
