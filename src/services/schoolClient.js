@@ -54,7 +54,8 @@ async function fetchSchoolsFromNeisByAtptCode(atptCode) {
     let pageIndex = 1;
     const result = [];
 
-    while (true) {
+    const maxPages = 200;
+    while (pageIndex <= maxPages) {
         const { data } = await axios.get(NEIS_SCHOOL_INFO_URL, {
             params: {
                 KEY: apiKey,
@@ -76,6 +77,10 @@ async function fetchSchoolsFromNeisByAtptCode(atptCode) {
         if (rows.length < pageSize) break;
 
         pageIndex += 1;
+    }
+
+    if (pageIndex > maxPages) {
+        throw new Error("NEIS schoolInfo 페이지네이션 상한을 초과했습니다.");
     }
 
     return result;
