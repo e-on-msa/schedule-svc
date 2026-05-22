@@ -19,10 +19,6 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.STRING(20),
                 allowNull: false,
             },
-            region_id: {
-                type: DataTypes.INTEGER,
-                allowNull: true,
-            },
             school_name: {
                 type: DataTypes.STRING(100),
                 allowNull: false,
@@ -42,13 +38,6 @@ module.exports = (sequelize, DataTypes) => {
             timestamps: true,
         },
     );
-
-    School.associate = (models) => {
-        School.belongsTo(models.Region, {
-            foreignKey: "region_id",
-            as: "region",
-        });
-    };
 
     return School;
 };
