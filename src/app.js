@@ -22,7 +22,8 @@ app.get("/health", (req, res) => {
 app.use((err, req, res, next) => {
     console.error("[schedule-svc error]", err);
 
-    return res.status(500).json({
+    const status = Number(err.status || err.statusCode) || 500;
+    return res.status(status).json({
         success: false,
         message: err.message || "Internal Server Error",
     });
