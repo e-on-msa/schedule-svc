@@ -82,13 +82,11 @@ schedule-svc/
 │   ├── services/
 │   ├── middlewares/
 │   ├── jobs/
+│   ├── config/
+│   │   └── db.js
 │   └── utils/
 │
-├── config/
-│   └── config.js
 ├── models/
-├── migrations/
-├── seeders/
 │
 ├── Dockerfile
 ├── package.json
@@ -231,5 +229,3 @@ docker run -p 8082:8082 schedule-svc
 | gateway-svc | 인증/라우팅 |
 | user-svc | 사용자 및 my_school 관리 |
 | frontend | 사용자 UI |
-
-```
