@@ -1,8 +1,19 @@
 // schedule-svc/src/utils/academicScheduleNormalizer.js
 function toDateOnly(aaYmd) {
-    if (!aaYmd || aaYmd.length !== 8) return null;
+    const value = String(aaYmd ?? "");
+    if (!/^\d{8}$/.test(value)) return null;
 
-    return `${aaYmd.slice(0, 4)}-${aaYmd.slice(4, 6)}-${aaYmd.slice(6, 8)}`;
+    const y = value.slice(0, 4);
+    const m = value.slice(4, 6);
+    const d = value.slice(6, 8);
+    const date = new Date(`${y}-${m}-${d}T00:00:00Z`);
+    const isValid =
+        !Number.isNaN(date.getTime()) &&
+        date.getUTCFullYear() === Number(y) &&
+        date.getUTCMonth() + 1 === Number(m) &&
+        date.getUTCDate() === Number(d);
+
+    return isValid ? `${y}-${m}-${d}` : null;
 }
 
 function normalizeAcademicSchedule(raw) {
