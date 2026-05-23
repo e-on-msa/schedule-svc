@@ -12,6 +12,13 @@ async function syncAcademicSchedules(req, res, next) {
             });
         }
 
+        if (year != null && !/^\d{4}$/.test(String(year))) {
+            return res.status(400).json({
+                success: false,
+                message: "year는 4자리 연도여야 합니다.",
+            });
+        }
+
         const result = await academicScheduleSyncService.syncAcademicSchedules({
             schoolCode,
             year,
