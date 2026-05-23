@@ -106,7 +106,7 @@ async function fetchAcademicSchedulesFromNeis({ atptCode, schoolCode, year }) {
             data?.RESULT || data?.SchoolSchedule?.[0]?.head?.[1]?.RESULT;
 
         if (neisResult?.CODE && neisResult.CODE !== "INFO-000") {
-            if (neisResult.CODE === "INFO-200") return [];
+            if (neisResult.CODE === "INFO-200") return result;
             throw new Error(
                 `NEIS SchoolSchedule API 오류: ${neisResult.CODE} - ${neisResult.MESSAGE}`,
             );
