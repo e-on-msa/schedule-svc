@@ -65,21 +65,50 @@ async function syncAcademicSchedules({ schoolCode, year }) {
     const years = year ? [String(year)] : getDefaultSyncYears();
 
     const results = [];
+    const failedYears = [];
 
     for (const targetYear of years) {
-        const result = await syncAcademicSchedulesBySchoolAndYear({
-            schoolCode,
-            year: targetYear,
-        });
+        try {
+            const result = await syncAcademicSchedulesBySchoolAndYear({
+                schoolCode,
+                year: targetYear,
+            });
 
-        results.push(result);
+            results.push({
+                year: targetYear,
+                status: "success",
+                ...result,
+            });
+        } catch (error) {
+            failedYears.push({
+                year: targetYear,
+                status: "failed",
+                reason: error.message,
+            });
+        }
     }
+
+    const syncedCount = results.reduce(
+        (sum, item) => sum + item.syncedCount,
+        0,
+    );
+
+    const status =
+        failedYears.length === 0
+            ? "success"
+            : results.length === 0
+              ? "failed"
+              : "partial";
 
     return {
         schoolCode,
         years,
-        syncedCount: results.reduce((sum, item) => sum + item.syncedCount, 0),
+        status,
+        syncedCount,
+        successCount: results.length,
+        failedCount: failedYears.length,
         results,
+        failedYears,
     };
 }
 
