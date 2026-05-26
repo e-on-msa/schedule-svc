@@ -74,17 +74,14 @@ function averageDateOnly(events) {
     }
 
     const avg = Math.floor(
-        timestamps.reduce((sum, time) => sum + time, 0) /
-            timestamps.length,
+        timestamps.reduce((sum, time) => sum + time, 0) / timestamps.length,
     );
 
     return new Date(avg).toISOString().slice(0, 10);
 }
 
 function getAnyGradeYn(events, field) {
-    return events.some((event) => event[field] === "Y")
-        ? "Y"
-        : "N";
+    return events.some((event) => event[field] === "Y") ? "Y" : "N";
 }
 
 function groupSchoolsByRegionName(schools) {
@@ -123,17 +120,12 @@ async function getAllSchoolsGroupedByRegionName() {
 }
 
 async function getSchoolsByRegionName(regionName) {
-    const schoolsByRegionName =
-        await getAllSchoolsGroupedByRegionName();
+    const schoolsByRegionName = await getAllSchoolsGroupedByRegionName();
 
     return schoolsByRegionName.get(regionName) ?? [];
 }
 
-async function generateAverageScheduleByRegion({
-    regionName,
-    year,
-    schools,
-}) {
+async function generateAverageScheduleByRegion({ regionName, year, schools }) {
     const academicYear = resolveAcademicYear(year);
 
     const region = await Region.findOne({
@@ -150,9 +142,7 @@ async function generateAverageScheduleByRegion({
         throw error;
     }
 
-    const targetSchools =
-        schools ??
-        (await getSchoolsByRegionName(regionName));
+    const targetSchools = schools ?? (await getSchoolsByRegionName(regionName));
 
     const schoolCodesByType = {
         elementary: [],
@@ -160,25 +150,18 @@ async function generateAverageScheduleByRegion({
     };
 
     for (const school of targetSchools) {
-        const normalizedType =
-            normalizeAverageSchoolType(
-                school.school_type,
-            );
+        const normalizedType = normalizeAverageSchoolType(school.school_type);
 
         if (!normalizedType) {
             continue;
         }
 
-        schoolCodesByType[
-            normalizedType
-        ].push(school.school_code);
+        schoolCodesByType[normalizedType].push(school.school_code);
     }
 
     const rowsToSave = [];
 
-    for (const [schoolType, schoolCodes] of Object.entries(
-        schoolCodesByType,
-    )) {
+    for (const [schoolType, schoolCodes] of Object.entries(schoolCodesByType)) {
         if (schoolCodes.length === 0) {
             continue;
         }
@@ -192,17 +175,14 @@ async function generateAverageScheduleByRegion({
             },
         });
 
-        const groupedEvents =
-            groupEventsByNormalizedName(events);
+        const groupedEvents = groupEventsByNormalizedName(events);
 
         for (const group of groupedEvents) {
             if (group.events.length < 2) {
                 continue;
             }
 
-            const averageDate = averageDateOnly(
-                group.events,
-            );
+            const averageDate = averageDateOnly(group.events);
 
             if (!averageDate) {
                 continue;
@@ -215,97 +195,80 @@ async function generateAverageScheduleByRegion({
                 average_date: averageDate,
                 event_name: group.title,
 
-                one_grade_event_yn:
-                    getAnyGradeYn(
-                        group.events,
-                        "one_grade_event_yn",
-                    ),
+                one_grade_event_yn: getAnyGradeYn(
+                    group.events,
+                    "one_grade_event_yn",
+                ),
 
-                tw_grade_event_yn:
-                    getAnyGradeYn(
-                        group.events,
-                        "tw_grade_event_yn",
-                    ),
+                tw_grade_event_yn: getAnyGradeYn(
+                    group.events,
+                    "tw_grade_event_yn",
+                ),
 
-                three_grade_event_yn:
-                    getAnyGradeYn(
-                        group.events,
-                        "three_grade_event_yn",
-                    ),
+                three_grade_event_yn: getAnyGradeYn(
+                    group.events,
+                    "three_grade_event_yn",
+                ),
 
-                fr_grade_event_yn:
-                    getAnyGradeYn(
-                        group.events,
-                        "fr_grade_event_yn",
-                    ),
+                fr_grade_event_yn: getAnyGradeYn(
+                    group.events,
+                    "fr_grade_event_yn",
+                ),
 
-                fiv_grade_event_yn:
-                    getAnyGradeYn(
-                        group.events,
-                        "fiv_grade_event_yn",
-                    ),
+                fiv_grade_event_yn: getAnyGradeYn(
+                    group.events,
+                    "fiv_grade_event_yn",
+                ),
 
-                six_grade_event_yn:
-                    getAnyGradeYn(
-                        group.events,
-                        "six_grade_event_yn",
-                    ),
+                six_grade_event_yn: getAnyGradeYn(
+                    group.events,
+                    "six_grade_event_yn",
+                ),
             });
         }
     }
 
     if (rowsToSave.length > 0) {
-        await AverageAcademicSchedule.bulkCreate(
-            rowsToSave,
-            {
-                updateOnDuplicate: [
-                    "one_grade_event_yn",
-                    "tw_grade_event_yn",
-                    "three_grade_event_yn",
-                    "fr_grade_event_yn",
-                    "fiv_grade_event_yn",
-                    "six_grade_event_yn",
-                    "updated_at",
-                ],
-            },
-        );
+        await AverageAcademicSchedule.bulkCreate(rowsToSave, {
+            updateOnDuplicate: [
+                "average_date",
+                "one_grade_event_yn",
+                "tw_grade_event_yn",
+                "three_grade_event_yn",
+                "fr_grade_event_yn",
+                "fiv_grade_event_yn",
+                "six_grade_event_yn",
+                "updated_at",
+            ],
+        });
     }
 
     return {
         regionId: region.id,
         regionName: region.region_name,
         academicYear,
-        targetSchoolCount:
-            targetSchools.length,
+        targetSchoolCount: targetSchools.length,
         savedCount: rowsToSave.length,
     };
 }
 
-async function generateAllAverageSchedules({
-    year,
-} = {}) {
+async function generateAllAverageSchedules({ year } = {}) {
     const regions = await Region.findAll({
         order: [["id", "ASC"]],
     });
 
-    const schoolsByRegionName =
-        await getAllSchoolsGroupedByRegionName();
+    const schoolsByRegionName = await getAllSchoolsGroupedByRegionName();
 
     const results = [];
     const failures = [];
 
     for (const region of regions) {
         try {
-            const result =
-                await generateAverageScheduleByRegion({
-                    regionName:
-                        region.region_name,
-                    year,
-                    schools:
-                        schoolsByRegionName.get(
-                            region.region_name,
-                        ) ?? [],
-                });
+            const result = await generateAverageScheduleByRegion({
+                regionName: region.region_name,
+                year,
+                schools: schoolsByRegionName.get(region.region_name) ?? [],
+            });
 
             results.push({
                 status: "success",
@@ -314,8 +277,7 @@ async function generateAllAverageSchedules({
         } catch (error) {
             failures.push({
                 regionId: region.id,
-                regionName:
-                    region.region_name,
+                regionName: region.region_name,
                 status: "failed",
                 reason: error.message,
             });
@@ -323,8 +285,7 @@ async function generateAllAverageSchedules({
     }
 
     return {
-        academicYear:
-            resolveAcademicYear(year),
+        academicYear: resolveAcademicYear(year),
 
         status:
             failures.length === 0
@@ -336,24 +297,15 @@ async function generateAllAverageSchedules({
         successCount: results.length,
         failedCount: failures.length,
 
-        savedCount: results.reduce(
-            (sum, item) =>
-                sum + item.savedCount,
-            0,
-        ),
+        savedCount: results.reduce((sum, item) => sum + item.savedCount, 0),
 
         results,
         failures,
     };
 }
 
-async function getAverageScheduleByRegion({
-    regionName,
-    year,
-    grade,
-}) {
-    const academicYear =
-        resolveAcademicYear(year);
+async function getAverageScheduleByRegion({ regionName, year, grade }) {
+    const academicYear = resolveAcademicYear(year);
 
     const region = await Region.findOne({
         where: {
@@ -370,25 +322,21 @@ async function getAverageScheduleByRegion({
         academic_year: academicYear,
     };
 
-    const gradeColumn =
-        getGradeColumn(grade);
+    const gradeColumn = getGradeColumn(grade);
 
     if (gradeColumn) {
         where[gradeColumn] = "Y";
     }
 
-    const rows =
-        await AverageAcademicSchedule.findAll({
-            where,
-            order: [
-                ["average_date", "ASC"],
-                ["event_name", "ASC"],
-            ],
-        });
+    const rows = await AverageAcademicSchedule.findAll({
+        where,
+        order: [
+            ["average_date", "ASC"],
+            ["event_name", "ASC"],
+        ],
+    });
 
-    return rows.map(
-        toAverageScheduleResponse,
-    );
+    return rows.map(toAverageScheduleResponse);
 }
 
 module.exports = {
