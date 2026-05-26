@@ -66,6 +66,7 @@ async function syncAcademicSchedules({ schoolCode, year }) {
 
     const results = [];
     const failedYears = [];
+    const errors = [];
 
     for (const targetYear of years) {
         try {
@@ -80,12 +81,17 @@ async function syncAcademicSchedules({ schoolCode, year }) {
                 ...result,
             });
         } catch (error) {
+            errors.push(error);
             failedYears.push({
                 year: targetYear,
                 status: "failed",
                 reason: error.message,
             });
         }
+    }
+
+    if (results.length === 0 && errors.length > 0) {
+        throw errors[0];
     }
 
     const syncedCount = results.reduce(
