@@ -1,8 +1,11 @@
 // schedule-svc/src/services/schoolSyncService.js
 const { Op } = require("sequelize");
-const { School } = require("../../models");
+const { School, AcademicSchedule } = require("../../models");
 const { ATPT_CODES } = require("../constants/atptCodes");
 const { fetchSchoolsFromNeisByAtptCode } = require("./schoolClient");
+const {
+    toNeisLikeScheduleResponse,
+} = require("../utils/academicScheduleResponseMapper");
 const {
     isExcludedSchoolType,
     normalizeSchool,
@@ -86,8 +89,83 @@ async function syncSchoolsFromNeis() {
     };
 }
 
+function getCurrentAcademicYear() {
+    const today = new Date();
+    return today.getMonth() + 1 >= 3
+        ? String(today.getFullYear())
+        : String(today.getFullYear() - 1);
+}
+
+function resolveAcademicYear(year) {
+    const currentYear = getCurrentAcademicYear();
+
+    if (year === "prev") {
+        return String(Number(currentYear) - 1);
+    }
+
+    if (/^\d{4}$/.test(String(year))) {
+        return String(year);
+    }
+
+    return currentYear;
+}
+
+function getGradeColumn(grade) {
+    const gradeMap = {
+        1: "one_grade_event_yn",
+        2: "tw_grade_event_yn",
+        3: "three_grade_event_yn",
+        4: "fr_grade_event_yn",
+        5: "fiv_grade_event_yn",
+        6: "six_grade_event_yn",
+    };
+
+    return gradeMap[String(grade)];
+}
+
+async function getSchoolSchedule(schoolCode, options = {}) {
+    const school = await School.findOne({
+        where: {
+            school_code: schoolCode,
+        },
+    });
+
+    if (!school) {
+        return [];
+    }
+
+    return getAllSchoolSchedule(schoolCode, school.atpt_code, options);
+}
+
+async function getAllSchoolSchedule(schoolCode, atptCode, options = {}) {
+    const academicYear = resolveAcademicYear(options.year);
+    const gradeColumn = getGradeColumn(options.grade);
+
+    const where = {
+        school_code: schoolCode,
+        atpt_code: atptCode,
+        academic_year: academicYear,
+    };
+
+    if (gradeColumn) {
+        where[gradeColumn] = "Y";
+    }
+
+    const rows = await AcademicSchedule.findAll({
+        where,
+        order: [
+            ["aa_ymd", "ASC"],
+            ["event_name", "ASC"],
+        ],
+    });
+
+    return rows.map(toNeisLikeScheduleResponse);
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
     syncSchoolsFromNeis,
+    getSchoolSchedule,
+    getAllSchoolSchedule,
 };

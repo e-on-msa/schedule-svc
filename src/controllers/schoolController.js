@@ -46,8 +46,56 @@ async function syncSchools(req, res, next) {
     }
 }
 
+// schedule-svc/src/controllers/schoolController.js
+async function getSchedule(req, res, next) {
+    try {
+        const { schoolId } = req.params;
+        const { year, grade } = req.query;
+
+        if (!schoolId) {
+            return res.status(400).json({
+                error: "schoolId를 필수로 입력해야 합니다",
+            });
+        }
+
+        const schedule = await schoolSyncService.getSchoolSchedule(schoolId, {
+            year,
+            grade,
+        });
+
+        return res.json(schedule);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function getAllSchedule(req, res, next) {
+    try {
+        const { schoolId, atptCode } = req.params;
+        const { year, grade } = req.query;
+
+        if (!schoolId || !atptCode) {
+            return res.status(400).json({
+                error: "schoolId와 atptCode(교육청 코드)는 필수입니다",
+            });
+        }
+
+        const schedule = await schoolSyncService.getAllSchoolSchedule(
+            schoolId,
+            atptCode,
+            { year, grade },
+        );
+
+        return res.json(schedule);
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
     syncSchools,
+    getSchedule,
+    getAllSchedule,
 };
