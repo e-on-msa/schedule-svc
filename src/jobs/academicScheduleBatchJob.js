@@ -45,12 +45,15 @@ async function runAcademicScheduleBatch(options = {}) {
     };
 
     try {
+        const parsedLimit = Number(options.limit);
+        const hasValidLimit = Number.isInteger(parsedLimit) && parsedLimit > 0;
+
         const schools = await School.findAll({
             attributes: ["school_code", "school_name", "atpt_code"],
             order: [["id", "ASC"]],
-            ...(options.limit
+            ...(hasValidLimit
                 ? {
-                      limit: Number(options.limit),
+                      limit: parsedLimit,
                   }
                 : {}),
         });
