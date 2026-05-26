@@ -45,7 +45,7 @@ async function runAcademicScheduleBatch(options = {}) {
             order: [["id", "ASC"]],
         });
 
-        result.totalSchoolCount = schools.length;
+        result.totalSyncCount = schools.length * years.length;
 
         for (const school of schools) {
             for (const year of years) {
