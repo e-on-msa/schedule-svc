@@ -8,6 +8,8 @@ const internalRegionRouter = require("./routes/internalRegionRouter");
 const schoolScheduleRouter = require("./routes/schoolScheduleRouter");
 const internalSchoolRouter = require("./routes/internalSchoolRouter");
 const internalAcademicScheduleRouter = require("./routes/internalAcademicScheduleRouter");
+const averageScheduleRouter = require("./routes/averageScheduleRouter");
+const internalAverageScheduleRouter = require("./routes/internalAverageScheduleRouter");
 
 const app = express();
 
@@ -24,10 +26,12 @@ app.get("/health", (req, res) => {
 
 app.use("/api/regions", regionRouter);
 app.use("/api/schoolSchedule", schoolScheduleRouter);
+app.use("/api/averageSchedule", averageScheduleRouter);
 
 app.use("/internal/regions", internalRegionRouter);
 app.use("/internal/schools", internalSchoolRouter);
 app.use("/internal/academic-schedules", internalAcademicScheduleRouter);
+app.use("/internal/average-schedules", internalAverageScheduleRouter);
 
 app.use((err, req, res, next) => {
     console.error("[schedule-svc error]", err);
