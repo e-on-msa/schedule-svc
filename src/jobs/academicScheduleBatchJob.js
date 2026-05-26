@@ -101,21 +101,52 @@ async function runAcademicScheduleBatch(options = {}) {
     }
 }
 
+function getAcademicScheduleCronTimezone() {
+    return process.env.ACADEMIC_SCHEDULE_CRON_TIMEZONE || "Asia/Seoul";
+}
+
+function validateAcademicScheduleCronExpression(cronExpression) {
+    const validationResult = cron.validateCronExpression(cronExpression);
+
+    if (!validationResult.valid) {
+        const errorMessage =
+            validationResult.error?.message ||
+            "유효하지 않은 cron 표현식입니다.";
+
+        throw new Error(
+            `ACADEMIC_SCHEDULE_CRON 설정이 올바르지 않습니다: ${errorMessage}`,
+        );
+    }
+}
+
 function startAcademicScheduleBatchJob() {
     if (process.env.ACADEMIC_SCHEDULE_CRON_ENABLED !== "true") {
         console.log("[academic schedule batch] cron disabled");
         return;
     }
 
-    const cronExpression = process.env.ACADEMIC_SCHEDULE_CRON || "0 3 * * *";
+    const cronExpression =
+        process.env.ACADEMIC_SCHEDULE_CRON || "0 3 * * *";
 
-    cron.schedule(cronExpression, async () => {
-        console.log("[academic schedule batch] cron started");
+    const timezone = getAcademicScheduleCronTimezone();
 
-        await runAcademicScheduleBatch();
-    });
+    validateAcademicScheduleCronExpression(cronExpression);
 
-    console.log(`[academic schedule batch] cron registered: ${cronExpression}`);
+    cron.schedule(
+        cronExpression,
+        async () => {
+            console.log("[academic schedule batch] cron started");
+
+            await runAcademicScheduleBatch();
+        },
+        {
+            timezone,
+        },
+    );
+
+    console.log(
+        `[academic schedule batch] cron registered: ${cronExpression}, timezone: ${timezone}`,
+    );
 }
 
 module.exports = {
