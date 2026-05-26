@@ -8,5 +8,9 @@ const router = express.Router();
 router.use(requireInternalAccess);
 
 router.post("/sync", academicScheduleController.syncAcademicSchedules);
+router.post(
+    "/batch",
+    academicScheduleController.runAcademicScheduleBatchController,
+);
 
 module.exports = router;

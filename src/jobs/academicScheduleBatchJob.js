@@ -48,6 +48,11 @@ async function runAcademicScheduleBatch(options = {}) {
         const schools = await School.findAll({
             attributes: ["school_code", "school_name", "atpt_code"],
             order: [["id", "ASC"]],
+            ...(options.limit
+                ? {
+                      limit: Number(options.limit),
+                  }
+                : {}),
         });
 
         result.totalSyncCount = schools.length * years.length;
