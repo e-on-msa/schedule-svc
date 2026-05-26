@@ -125,8 +125,7 @@ function startAcademicScheduleBatchJob() {
         return;
     }
 
-    const cronExpression =
-        process.env.ACADEMIC_SCHEDULE_CRON || "0 3 * * *";
+    const cronExpression = process.env.ACADEMIC_SCHEDULE_CRON || "0 3 * * *";
 
     const timezone = getAcademicScheduleCronTimezone();
 
@@ -137,7 +136,14 @@ function startAcademicScheduleBatchJob() {
         async () => {
             console.log("[academic schedule batch] cron started");
 
-            await runAcademicScheduleBatch();
+            try {
+                await runAcademicScheduleBatch();
+            } catch (error) {
+                console.error(
+                    "[academic schedule batch] unexpected error:",
+                    error,
+                );
+            }
         },
         {
             timezone,
