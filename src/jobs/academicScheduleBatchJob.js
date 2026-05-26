@@ -129,7 +129,18 @@ function startAcademicScheduleBatchJob() {
 
     const timezone = getAcademicScheduleCronTimezone();
 
-    validateAcademicScheduleCronExpression(cronExpression);
+    try {
+        validateAcademicScheduleCronExpression(cronExpression);
+    } catch (error) {
+        console.error(
+            "[academic schedule batch] cron validation failed:",
+            error.message,
+        );
+        console.warn(
+            "[academic schedule batch] cron job not registered due to invalid expression",
+        );
+        return;
+    }
 
     cron.schedule(
         cronExpression,
