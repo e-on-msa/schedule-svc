@@ -91,10 +91,33 @@ async function getAllSchedule(req, res, next) {
     }
 }
 
+async function validateSchool(req, res, next) {
+    try {
+        const { schoolCode } = req.query;
+
+        if (!schoolCode) {
+            return res.status(400).json({
+                success: false,
+                message: "schoolCode는 필수입니다.",
+            });
+        }
+
+        const result = await schoolSyncService.validateSchool(schoolCode);
+
+        return res.json({
+            success: true,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
     syncSchools,
     getSchedule,
     getAllSchedule,
+    validateSchool,
 };

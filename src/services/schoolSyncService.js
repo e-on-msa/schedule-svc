@@ -177,10 +177,37 @@ async function getAllSchoolSchedule(schoolCode, atptCode, options = {}) {
     return rows.map(toNeisLikeScheduleResponse);
 }
 
+async function validateSchool(schoolCode) {
+    const school = await School.findOne({
+        where: {
+            school_code: schoolCode,
+        },
+        attributes: ["school_code", "school_name", "atpt_code", "school_type"],
+    });
+
+    if (!school) {
+        return {
+            valid: false,
+            school: null,
+        };
+    }
+
+    return {
+        valid: true,
+        school: {
+            schoolCode: school.school_code,
+            schoolName: school.school_name,
+            atptCode: school.atpt_code,
+            schoolType: school.school_type,
+        },
+    };
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
     syncSchoolsFromNeis,
     getSchoolSchedule,
     getAllSchoolSchedule,
+    validateSchool,
 };
