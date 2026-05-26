@@ -106,16 +106,8 @@ function getAcademicScheduleCronTimezone() {
 }
 
 function validateAcademicScheduleCronExpression(cronExpression) {
-    const validationResult = cron.validateCronExpression(cronExpression);
-
-    if (!validationResult.valid) {
-        const errorMessage =
-            validationResult.error?.message ||
-            "유효하지 않은 cron 표현식입니다.";
-
-        throw new Error(
-            `ACADEMIC_SCHEDULE_CRON 설정이 올바르지 않습니다: ${errorMessage}`,
-        );
+    if (!cron.validate(cronExpression)) {
+        throw new Error("ACADEMIC_SCHEDULE_CRON 설정이 올바르지 않습니다.");
     }
 }
 
