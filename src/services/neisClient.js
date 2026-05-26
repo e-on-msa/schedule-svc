@@ -73,6 +73,58 @@ async function fetchSchoolSchedulesFromNeis({
     return extractRows(data);
 }
 
+async function fetchAcademicSchedulesFromNeis({ atptCode, schoolCode, year }) {
+    const apiKey = process.env.NEIS_API_KEY;
+
+    if (!apiKey) {
+        throw new Error("NEIS_API_KEY 환경변수가 설정되지 않았습니다.");
+    }
+
+    const pageSize = 1000;
+    let pageIndex = 1;
+    const result = [];
+
+    while (true) {
+        const { data } = await axios.get(
+            "https://open.neis.go.kr/hub/SchoolSchedule",
+            {
+                params: {
+                    KEY: apiKey,
+                    Type: "json",
+                    pIndex: pageIndex,
+                    pSize: pageSize,
+                    ATPT_OFCDC_SC_CODE: atptCode,
+                    SD_SCHUL_CODE: schoolCode,
+                    AA_FROM_YMD: `${year}0101`,
+                    AA_TO_YMD: `${year}1231`,
+                },
+                timeout: 10000,
+            },
+        );
+
+        const neisResult =
+            data?.RESULT || data?.SchoolSchedule?.[0]?.head?.[1]?.RESULT;
+
+        if (neisResult?.CODE && neisResult.CODE !== "INFO-000") {
+            if (neisResult.CODE === "INFO-200") return result;
+            throw new Error(
+                `NEIS SchoolSchedule API 오류: ${neisResult.CODE} - ${neisResult.MESSAGE}`,
+            );
+        }
+
+        const rows = data?.SchoolSchedule?.[1]?.row;
+        if (!Array.isArray(rows)) return result;
+
+        result.push(...rows);
+
+        if (rows.length < pageSize) break;
+        pageIndex += 1;
+    }
+
+    return result;
+}
+
 module.exports = {
     fetchSchoolSchedulesFromNeis,
+    fetchAcademicSchedulesFromNeis,
 };
