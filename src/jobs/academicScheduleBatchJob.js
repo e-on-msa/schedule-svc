@@ -83,6 +83,16 @@ async function runAcademicScheduleBatch(options = {}) {
         }
 
         return result;
+    } catch (error) {
+        result.status = "failed";
+        result.failures.push({
+            schoolCode: null,
+            schoolName: null,
+            atptCode: null,
+            year: null,
+            reason: error?.message ?? String(error),
+        });
+        return result;
     } finally {
         result.finishedAt = new Date().toISOString();
         isAcademicScheduleBatchRunning = false;
