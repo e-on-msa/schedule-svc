@@ -20,7 +20,8 @@ async function searchSchoolBySchoolCode(req, res, next) {
 
         if (!query) {
             return res.status(400).json({
-                error: "학교 코드를 입력해주세요",
+                success: false,
+                message: "학교 코드를 필수로 입력해야 합니다.",
             });
         }
 
@@ -53,7 +54,8 @@ async function getSchedule(req, res, next) {
 
         if (!schoolCode) {
             return res.status(400).json({
-                error: "학교 코드를 필수로 입력해야 합니다",
+                success: false,
+                message: "학교 코드를 필수로 입력해야 합니다.",
             });
         }
 
@@ -75,7 +77,8 @@ async function getAllSchedule(req, res, next) {
 
         if (!schoolCode || !atptCode) {
             return res.status(400).json({
-                error: "학교 코드와 교육청 코드는 필수입니다",
+                success: false,
+                message: "학교 코드와 교육청 코드는 필수입니다",
             });
         }
 
@@ -91,10 +94,36 @@ async function getAllSchedule(req, res, next) {
     }
 }
 
+async function validateSchool(req, res, next) {
+    try {
+        const schoolCode =
+            typeof req.query.schoolCode === "string"
+                ? req.query.schoolCode.trim()
+                : null;
+
+        if (!schoolCode) {
+            return res.status(400).json({
+                success: false,
+                message: "학교 코드를 필수로 입력해야 합니다.",
+            });
+        }
+
+        const result = await schoolSyncService.validateSchool(schoolCode);
+
+        return res.json({
+            success: true,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
     syncSchools,
     getSchedule,
     getAllSchedule,
+    validateSchool,
 };

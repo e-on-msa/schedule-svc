@@ -8,5 +8,6 @@ const router = express.Router();
 router.use(requireInternalAccess);
 
 router.post("/sync", schoolController.syncSchools);
+router.get("/validate", schoolController.validateSchool);
 
 module.exports = router;

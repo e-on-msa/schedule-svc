@@ -11,7 +11,7 @@ async function syncAcademicSchedules(req, res, next) {
         if (!schoolCode) {
             return res.status(400).json({
                 success: false,
-                message: "schoolCode는 필수입니다.",
+                message: "학교 코드를 필수로 입력해야 합니다.",
             });
         }
 
