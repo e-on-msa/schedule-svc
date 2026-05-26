@@ -2,14 +2,14 @@
 function extractDistrict(address = "") {
     const parts = address.trim().split(/\s+/);
 
-    return (
-        parts.findLast(
-            (part) =>
-                part.endsWith("구") ||
-                part.endsWith("군") ||
-                part.endsWith("시"),
-        ) || null
-    );
+    const district = parts.find((part) => part.endsWith("구"));
+    if (district) return district;
+
+    const county = parts.find((part) => part.endsWith("군"));
+    if (county) return county;
+
+    const city = parts.find((part) => part.endsWith("시"));
+    return city || null;
 }
 
 module.exports = {
