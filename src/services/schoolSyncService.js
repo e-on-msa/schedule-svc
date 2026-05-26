@@ -98,6 +98,9 @@ function getCurrentAcademicYear() {
 
 function resolveAcademicYear(year) {
     const currentYear = getCurrentAcademicYear();
+    if (year == null || year === "") {
+        return currentYear;
+    }
 
     if (year === "prev") {
         return String(Number(currentYear) - 1);
@@ -107,10 +110,16 @@ function resolveAcademicYear(year) {
         return String(year);
     }
 
-    return currentYear;
+    const error = new Error("year는 'prev' 또는 4자리 연도여야 합니다.");
+    error.status = 400;
+    throw error;
 }
 
 function getGradeColumn(grade) {
+    if (grade == null || grade === "") {
+        return null;
+    }
+
     const gradeMap = {
         1: "one_grade_event_yn",
         2: "tw_grade_event_yn",
@@ -120,7 +129,13 @@ function getGradeColumn(grade) {
         6: "six_grade_event_yn",
     };
 
-    return gradeMap[String(grade)];
+    const column = gradeMap[String(grade)];
+    if (!column) {
+        const error = new Error("grade는 1~6 사이 값이어야 합니다.");
+        error.status = 400;
+        throw error;
+    }
+    return column;
 }
 
 async function getSchoolSchedule(schoolCode, options = {}) {
