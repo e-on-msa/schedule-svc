@@ -1,0 +1,114 @@
+// schedule-svc/src/jobs/academicScheduleBatchJob.js
+const cron = require("node-cron");
+const { School } = require("../../models");
+const {
+    syncAcademicSchedulesBySchoolAndYear,
+} = require("../services/academicScheduleSyncService");
+
+let isAcademicScheduleBatchRunning = false;
+
+function getDefaultBatchYears() {
+    const currentYear = new Date().getFullYear();
+    return [currentYear - 1, currentYear].map(String);
+}
+
+async function runAcademicScheduleBatch(options = {}) {
+    if (isAcademicScheduleBatchRunning) {
+        return {
+            status: "skipped",
+            reason: "이미 학사일정 batch가 실행 중입니다.",
+        };
+    }
+
+    isAcademicScheduleBatchRunning = true;
+
+    const startedAt = new Date();
+    const years = options.years?.length
+        ? options.years.map(String)
+        : getDefaultBatchYears();
+
+    const result = {
+        status: "success",
+        startedAt: startedAt.toISOString(),
+        finishedAt: null,
+        years,
+        totalSchoolCount: 0,
+        successCount: 0,
+        failedCount: 0,
+        syncedCount: 0,
+        failures: [],
+    };
+
+    try {
+        const schools = await School.findAll({
+            attributes: ["school_code", "school_name", "atpt_code"],
+            order: [["id", "ASC"]],
+        });
+
+        result.totalSchoolCount = schools.length;
+
+        for (const school of schools) {
+            for (const year of years) {
+                try {
+                    const syncResult =
+                        await syncAcademicSchedulesBySchoolAndYear({
+                            schoolCode: school.school_code,
+                            year,
+                        });
+
+                    result.successCount += 1;
+                    result.syncedCount += syncResult.syncedCount;
+                } catch (error) {
+                    result.failedCount += 1;
+                    result.failures.push({
+                        schoolCode: school.school_code,
+                        schoolName: school.school_name,
+                        atptCode: school.atpt_code,
+                        year,
+                        reason: error.message,
+                    });
+
+                    console.error("[academic schedule batch failed]", {
+                        schoolCode: school.school_code,
+                        schoolName: school.school_name,
+                        year,
+                        error: error.message,
+                    });
+                }
+            }
+        }
+
+        if (result.failedCount > 0) {
+            result.status = result.successCount > 0 ? "partial" : "failed";
+        }
+
+        return result;
+    } finally {
+        result.finishedAt = new Date().toISOString();
+        isAcademicScheduleBatchRunning = false;
+
+        console.log("[academic schedule batch completed]", result);
+    }
+}
+
+function startAcademicScheduleBatchJob() {
+    if (process.env.ACADEMIC_SCHEDULE_CRON_ENABLED !== "true") {
+        console.log("[academic schedule batch] cron disabled");
+        return;
+    }
+
+    const cronExpression = process.env.ACADEMIC_SCHEDULE_CRON || "0 3 * * *";
+
+    cron.schedule(cronExpression, async () => {
+        console.log("[academic schedule batch] cron started");
+
+        await runAcademicScheduleBatch();
+    });
+
+    console.log(`[academic schedule batch] cron registered: ${cronExpression}`);
+}
+
+module.exports = {
+    runAcademicScheduleBatch,
+    startAcademicScheduleBatchJob,
+};

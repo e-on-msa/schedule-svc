@@ -3,6 +3,9 @@ require("dotenv").config();
 
 const app = require("./app");
 const { sequelize } = require("../models");
+const {
+    startAcademicScheduleBatchJob,
+} = require("./jobs/academicScheduleBatchJob");
 
 const PORT = process.env.PORT || 8082;
 
@@ -12,11 +15,10 @@ async function startServer() {
 
         console.log("DB connected");
 
-        await sequelize.sync({
-            alter: true,
-        });
-
+        await sequelize.sync({ alter: true });
         console.log("DB sync completed");
+
+        startAcademicScheduleBatchJob();
 
         app.listen(PORT, () => {
             console.log(`schedule-svc listening on ${PORT}`);
