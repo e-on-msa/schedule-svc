@@ -46,19 +46,18 @@ async function syncSchools(req, res, next) {
     }
 }
 
-// schedule-svc/src/controllers/schoolController.js
 async function getSchedule(req, res, next) {
     try {
-        const { schoolId } = req.params;
+        const { schoolCode } = req.params;
         const { year, grade } = req.query;
 
-        if (!schoolId) {
+        if (!schoolCode) {
             return res.status(400).json({
-                error: "schoolId를 필수로 입력해야 합니다",
+                error: "학교 코드를 필수로 입력해야 합니다",
             });
         }
 
-        const schedule = await schoolSyncService.getSchoolSchedule(schoolId, {
+        const schedule = await schoolSyncService.getSchoolSchedule(schoolCode, {
             year,
             grade,
         });
@@ -71,17 +70,17 @@ async function getSchedule(req, res, next) {
 
 async function getAllSchedule(req, res, next) {
     try {
-        const { schoolId, atptCode } = req.params;
+        const { schoolCode, atptCode } = req.params;
         const { year, grade } = req.query;
 
-        if (!schoolId || !atptCode) {
+        if (!schoolCode || !atptCode) {
             return res.status(400).json({
-                error: "schoolId와 atptCode(교육청 코드)는 필수입니다",
+                error: "학교 코드와 교육청 코드는 필수입니다",
             });
         }
 
         const schedule = await schoolSyncService.getAllSchoolSchedule(
-            schoolId,
+            schoolCode,
             atptCode,
             { year, grade },
         );

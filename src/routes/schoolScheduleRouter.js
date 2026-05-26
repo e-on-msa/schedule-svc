@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get("/schools", schoolController.searchSchools);
 router.get("/schools/code", schoolController.searchSchoolBySchoolCode);
-router.get("/schools/:schoolId/schedule", schoolController.getSchedule);
-router.get("/schools/:schoolId/:atptCode/schedule", schoolController.getAllSchedule);
+router.get("/schools/:schoolCode/schedule", schoolController.getSchedule);
+router.get("/schools/:schoolCode/:atptCode/schedule", schoolController.getAllSchedule);
 
 module.exports = router;
