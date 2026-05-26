@@ -13,7 +13,6 @@ module.exports = (sequelize, DataTypes) => {
             school_code: {
                 type: DataTypes.STRING(20),
                 allowNull: false,
-                unique: true,
             },
             atpt_code: {
                 type: DataTypes.STRING(20),
@@ -36,6 +35,13 @@ module.exports = (sequelize, DataTypes) => {
             tableName: "schools",
             underscored: true,
             timestamps: true,
+            indexes: [
+                {
+                    unique: true,
+                    fields: ["school_code"],
+                    name: "uk_schools_school_code",
+                },
+            ],
         },
     );
 
