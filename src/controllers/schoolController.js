@@ -93,7 +93,10 @@ async function getAllSchedule(req, res, next) {
 
 async function validateSchool(req, res, next) {
     try {
-        const { schoolCode } = req.query;
+        const schoolCode =
+            typeof req.query.schoolCode === "string"
+                ? req.query.schoolCode.trim()
+                : null;
 
         if (!schoolCode) {
             return res.status(400).json({
