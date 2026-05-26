@@ -305,6 +305,8 @@ async function generateAllAverageSchedules({ year } = {}) {
 }
 
 async function getAverageScheduleByRegion({ regionName, year, grade }) {
+    assertValidGrade(grade);
+
     const academicYear = resolveAcademicYear(year);
 
     const region = await Region.findOne({
@@ -337,6 +339,18 @@ async function getAverageScheduleByRegion({ regionName, year, grade }) {
     });
 
     return rows.map(toAverageScheduleResponse);
+}
+
+function assertValidGrade(grade) {
+    if (grade === undefined || grade === null || grade === "") {
+        return;
+    }
+
+    if (!["1", "2", "3", "4", "5", "6"].includes(String(grade))) {
+        const error = new Error("grade는 1~6 사이의 값이어야 합니다.");
+        error.status = 400;
+        throw error;
+    }
 }
 
 module.exports = {
