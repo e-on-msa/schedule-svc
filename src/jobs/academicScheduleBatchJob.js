@@ -32,7 +32,7 @@ async function runAcademicScheduleBatch(options = {}) {
         startedAt: startedAt.toISOString(),
         finishedAt: null,
         years,
-        totalSchoolCount: 0,
+        totalSyncCount: 0, // 학교 × 연도 조합의 총 개수
         successCount: 0,
         failedCount: 0,
         syncedCount: 0,
