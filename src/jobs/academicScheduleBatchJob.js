@@ -7,8 +7,13 @@ const {
 
 let isAcademicScheduleBatchRunning = false;
 
-function getDefaultBatchYears() {
-    const currentYear = new Date().getFullYear();
+function getDefaultBatchYears(timezone = getAcademicScheduleCronTimezone()) {
+    const currentYear = Number(
+        new Intl.DateTimeFormat("en", {
+            timeZone: timezone,
+            year: "numeric",
+        }).format(new Date()),
+    );
     return [currentYear - 1, currentYear].map(String);
 }
 
@@ -25,7 +30,7 @@ async function runAcademicScheduleBatch(options = {}) {
     const startedAt = new Date();
     const years = options.years?.length
         ? options.years.map(String)
-        : getDefaultBatchYears();
+        : getDefaultBatchYears(getAcademicScheduleCronTimezone());
 
     const result = {
         status: "success",
