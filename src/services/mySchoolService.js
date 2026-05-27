@@ -16,11 +16,15 @@ function normalizeMySchoolPayload(payload) {
     const schoolCode = payload.school_code ?? payload.schoolCode;
     const regionId = payload.region_id ?? payload.regionId;
 
-    if (!schoolCode || !regionId) return null;
+    const normalizedSchoolCode = String(schoolCode ?? "").trim();
+    const normalizedRegionId = Number(regionId);
+
+    if (!normalizedSchoolCode) return null;
+    if (!Number.isInteger(normalizedRegionId)) return null;
 
     return {
-        school_code: String(schoolCode),
-        region_id: Number(regionId),
+        school_code: normalizedSchoolCode,
+        region_id: normalizedRegionId,
     };
 }
 
