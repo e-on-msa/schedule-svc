@@ -9,6 +9,8 @@ RUN npm ci --omit=dev
 COPY . .
 
 ENV NODE_ENV=production
+RUN chown -R node:node /app
+USER node
 
 EXPOSE 8082
 
