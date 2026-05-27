@@ -2,7 +2,7 @@
 const redis = require("../config/redis");
 const { fetchMySchoolFromUserSvc } = require("./userSvcClient");
 
-const ttlFromENV = Number(process.env.MY_SCHOOL_CACHE_TTL_SECONDS);
+const ttlFromEnv = Number(process.env.MY_SCHOOL_CACHE_TTL_SECONDS);
 const MY_SCHOOL_TTL_SECONDS =
     Number.isInteger(ttlFromEnv) && ttlFromEnv > 0 ? ttlFromEnv : 86400;
 
