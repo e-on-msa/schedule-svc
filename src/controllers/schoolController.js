@@ -1,5 +1,6 @@
 // schedule-svc/src/controllers/schoolController.js
 const schoolSyncService = require("../services/schoolSyncService");
+const mySchoolService = require("../services/mySchoolService");
 
 async function searchSchools(req, res, next) {
     try {
@@ -119,6 +120,40 @@ async function validateSchool(req, res, next) {
     }
 }
 
+async function getMySchoolSchedule(req, res, next) {
+    try {
+        const userId = req.header("x-user-id");
+        const { year, grade } = req.query;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "x-user-id 헤더가 필요합니다.",
+            });
+        }
+
+        const { source, school } =
+            await mySchoolService.getMySchoolByUserId(userId);
+
+        const schedule = await schoolSyncService.getAllSchoolSchedule(
+            school.schoolCode,
+            school.atptCode,
+            { year, grade },
+        );
+
+        return res.json({
+            success: true,
+            data: {
+                source,
+                school,
+                schedule,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
@@ -126,4 +161,5 @@ module.exports = {
     getSchedule,
     getAllSchedule,
     validateSchool,
+    getMySchoolSchedule,
 };
