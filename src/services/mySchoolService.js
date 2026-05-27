@@ -13,12 +13,22 @@ function getMySchoolCacheKey(userId) {
 async function getMySchoolByUserId(userId) {
     const cacheKey = getMySchoolCacheKey(userId);
 
-    const cached = await redis.get(cacheKey);
+    let cached = null;
+    try {
+        cached = await redis.get(cacheKey);
+    } catch (_) {
+        cached = null;
+    }
+
     if (cached) {
-        return {
-            source: "cache",
-            school: JSON.parse(cached),
-        };
+        try {
+            return {
+                source: "cache",
+                school: JSON.parse(cached),
+            };
+        } catch (_) {
+            await redis.del(cacheKey).catch(() => {});
+        }
     }
 
     const school = await fetchMySchoolFromUserSvc(userId);
