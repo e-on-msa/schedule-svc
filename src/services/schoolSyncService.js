@@ -203,6 +203,14 @@ async function validateSchool(schoolCode) {
     };
 }
 
+async function getSchoolBySchoolCode(schoolCode) {
+    return School.findOne({
+        where: {
+            school_code: schoolCode,
+        },
+    });
+}
+
 module.exports = {
     searchSchools,
     searchSchoolBySchoolCode,
@@ -210,4 +218,5 @@ module.exports = {
     getSchoolSchedule,
     getAllSchoolSchedule,
     validateSchool,
+    getSchoolBySchoolCode,
 };
