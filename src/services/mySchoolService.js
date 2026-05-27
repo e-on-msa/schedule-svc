@@ -2,9 +2,9 @@
 const redis = require("../config/redis");
 const { fetchMySchoolFromUserSvc } = require("./userSvcClient");
 
-const MY_SCHOOL_TTL_SECONDS = Number(
-    process.env.MY_SCHOOL_CACHE_TTL_SECONDS || 86400,
-);
+const ttlFromENV = Number(process.env.MY_SCHOOL_CACHE_TTL_SECONDS);
+const MY_SCHOOL_TTL_SECONDS =
+    Number.isInteger(ttlFromEnv) && ttlFromEnv > 0 ? ttlFromEnv : 86400;
 
 function getMySchoolCacheKey(userId) {
     return `user:${userId}:my_school`;
