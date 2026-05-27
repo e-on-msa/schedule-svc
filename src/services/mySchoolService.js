@@ -10,10 +10,25 @@ function getMySchoolCacheKey(userId) {
     return `user:${userId}:my_school`;
 }
 
+function normalizeMySchoolPayload(payload) {
+    if (!payload) return null;
+
+    const schoolCode = payload.school_code ?? payload.schoolCode;
+    const regionId = payload.region_id ?? payload.regionId;
+
+    if (!schoolCode || !regionId) return null;
+
+    return {
+        school_code: String(schoolCode),
+        region_id: Number(regionId),
+    };
+}
+
 async function getMySchoolByUserId(userId) {
     const cacheKey = getMySchoolCacheKey(userId);
 
     let cached = null;
+
     try {
         cached = await redis.get(cacheKey);
     } catch (_) {
@@ -22,18 +37,26 @@ async function getMySchoolByUserId(userId) {
 
     if (cached) {
         try {
-            return {
-                source: "cache",
-                school: JSON.parse(cached),
-            };
+            const school = normalizeMySchoolPayload(JSON.parse(cached));
+
+            if (school) {
+                return {
+                    source: "cache",
+                    school,
+                };
+            }
+
+            await redis.del(cacheKey).catch(() => {});
         } catch (_) {
             await redis.del(cacheKey).catch(() => {});
         }
     }
 
-    const school = await fetchMySchoolFromUserSvc(userId);
+    const school = normalizeMySchoolPayload(
+        await fetchMySchoolFromUserSvc(userId),
+    );
 
-    if (!school?.schoolCode) {
+    if (!school) {
         const error = new Error("사용자의 학교 정보가 없습니다.");
         error.status = 404;
         throw error;

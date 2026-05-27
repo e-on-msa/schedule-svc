@@ -135,9 +135,20 @@ async function getMySchoolSchedule(req, res, next) {
         const { source, school } =
             await mySchoolService.getMySchoolByUserId(userId);
 
+        const schoolInfo = await schoolSyncService.getSchoolBySchoolCode(
+            school.school_code,
+        );
+
+        if (!schoolInfo) {
+            return res.status(404).json({
+                success: false,
+                message: "학교 마스터에서 학교 정보를 찾을 수 없습니다.",
+            });
+        }
+
         const schedule = await schoolSyncService.getAllSchoolSchedule(
-            school.schoolCode,
-            school.atptCode,
+            school.school_code,
+            schoolInfo.atpt_code,
             { year, grade },
         );
 
@@ -145,7 +156,13 @@ async function getMySchoolSchedule(req, res, next) {
             success: true,
             data: {
                 source,
-                school,
+                school: {
+                    school_code: school.school_code,
+                    region_id: school.region_id,
+                    atpt_code: schoolInfo.atpt_code,
+                    school_name: schoolInfo.school_name,
+                    school_type: schoolInfo.school_type,
+                },
                 schedule,
             },
         });
