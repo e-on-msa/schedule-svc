@@ -5,8 +5,12 @@ const schoolController = require("../controllers/schoolController");
 const router = express.Router();
 
 router.get("/schools", schoolController.searchSchools);
+router.get("/me/schedule", schoolController.getMySchoolSchedule);
 router.get("/schools/code", schoolController.searchSchoolBySchoolCode);
 router.get("/schools/:schoolCode/schedule", schoolController.getSchedule);
-router.get("/schools/:schoolCode/:atptCode/schedule", schoolController.getAllSchedule);
+router.get(
+    "/schools/:schoolCode/:atptCode/schedule",
+    schoolController.getAllSchedule,
+);
 
 module.exports = router;
