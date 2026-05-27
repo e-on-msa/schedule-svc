@@ -39,12 +39,9 @@ async function getMySchoolByUserId(userId) {
         throw error;
     }
 
-    await redis.set(
-        cacheKey,
-        JSON.stringify(school),
-        "EX",
-        MY_SCHOOL_TTL_SECONDS,
-    );
+    await redis
+        .set(cacheKey, JSON.stringify(school), "EX", MY_SCHOOL_TTL_SECONDS)
+        .catch(() => {});
 
     return {
         source: "user-svc",
