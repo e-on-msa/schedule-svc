@@ -1,4 +1,5 @@
-// schedule-svc/src/utils/eventNormalizer.js
+// schedule-svc/src/utils/eventSimilarityUtils.js
+
 const stringSimilarity = require("string-similarity");
 
 function normalizeEventName(value = "") {

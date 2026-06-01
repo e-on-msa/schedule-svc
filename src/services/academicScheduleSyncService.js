@@ -10,7 +10,7 @@ const {
     extractDistrict,
     normalizeRegionName,
 } = require("../utils/regionNormalizer");
-const { groupSimilarEvents } = require("../utils/eventNormalizer");
+const { groupSimilarEvents } = require("../utils/eventSimilarityUtils");
 
 function getCurrentAcademicYear() {
     const now = new Date();
@@ -148,7 +148,7 @@ async function getAllSchoolsGroupedByRegionName() {
 
 async function getSchoolsByRegionName(regionName) {
     const schoolsByRegionName = await getAllSchoolsGroupedByRegionName();
-    return schoolsByRegionName.get(normalizeRegionName(regionName)) || [];
+    return schoolsByRegionName.get(normalizeRegionName(regionName)) ?? [];
 }
 
 async function generateAverageScheduleByRegion({ regionName, year, schools }) {
