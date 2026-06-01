@@ -1,330 +1,124 @@
-// schedule-svc/src/services/averageScheduleService.js
-const { Op } = require("sequelize");
+// schedule-svc/src/services/academicScheduleSyncService.js
+const { School, AcademicSchedule } = require("../../models");
+const { fetchAcademicSchedulesFromNeis } = require("./neisClient");
 const {
-    Region,
-    School,
-    AcademicSchedule,
-    AverageAcademicSchedule,
-} = require("../../models");
-const {
-    extractDistrict,
-    normalizeRegionName,
-} = require("../utils/regionNormalizer");
-const { groupSimilarEvents } = require("../utils/eventSimilarityUtils");
+    normalizeAcademicSchedule,
+} = require("../utils/academicScheduleNormalizer");
 
-function getCurrentAcademicYear() {
-    const now = new Date();
-    return now.getMonth() + 1 >= 3
-        ? String(now.getFullYear())
-        : String(now.getFullYear() - 1);
+function getDefaultSyncYears() {
+    const currentYear = new Date().getFullYear();
+
+    return [currentYear - 1, currentYear].map(String);
 }
 
-function resolveAcademicYear(year) {
-    if (!year) return getCurrentAcademicYear();
-
-    if (year === "prev") {
-        return String(Number(getCurrentAcademicYear()) - 1);
-    }
-
-    return String(year);
-}
-
-function normalizeSchoolType(value = "") {
-    const type = String(value || "").trim();
-
-    if (type.includes("초")) return "ELEMENTARY";
-    if (type.includes("중")) return "MIDDLE";
-
-    return null;
-}
-
-function averageDate(events) {
-    const timestamps = events
-        .map((event) => new Date(event.schedule_date).getTime())
-        .filter((time) => !Number.isNaN(time));
-
-    if (timestamps.length === 0) return null;
-
-    const avg =
-        timestamps.reduce((sum, time) => sum + time, 0) / timestamps.length;
-
-    return new Date(avg).toISOString().slice(0, 10);
-}
-
-function hasAnyGradeEvent(events, columnName) {
-    return events.some((event) => event[columnName] === "Y") ? "Y" : "N";
-}
-
-function getGradeColumn(grade) {
-    const map = {
-        1: "one_grade_event_yn",
-        2: "tw_grade_event_yn",
-        3: "three_grade_event_yn",
-        4: "fr_grade_event_yn",
-        5: "fiv_grade_event_yn",
-        6: "six_grade_event_yn",
-    };
-
-    return map[String(grade)];
-}
-
-function assertValidGrade(grade) {
-    if (grade === undefined || grade === null || grade === "") return;
-
-    if (!getGradeColumn(grade)) {
-        const error = new Error("grade는 1~6 사이의 값이어야 합니다.");
-        error.status = 400;
-        throw error;
-    }
-}
-
-function toResponse(row) {
-    return {
-        id: row.id,
-        regionId: row.region_id,
-        schoolType: row.school_type,
-        academicYear: row.academic_year,
-        averageDate: row.average_date,
-        eventName: row.event_name,
-        oneGradeEventYn: row.one_grade_event_yn,
-        twGradeEventYn: row.tw_grade_event_yn,
-        threeGradeEventYn: row.three_grade_event_yn,
-        frGradeEventYn: row.fr_grade_event_yn,
-        fivGradeEventYn: row.fiv_grade_event_yn,
-        sixGradeEventYn: row.six_grade_event_yn,
-    };
-}
-
-async function findRegionByName(regionName) {
-    const normalizedName = normalizeRegionName(regionName);
-
-    const region = await Region.findOne({
+async function syncAcademicSchedulesBySchoolAndYear({ schoolCode, year }) {
+    const school = await School.findOne({
         where: {
-            region_name: normalizedName,
+            school_code: schoolCode,
         },
     });
 
-    if (!region) {
-        const error = new Error(`지역을 찾을 수 없습니다: ${normalizedName}`);
+    if (!school) {
+        const error = new Error("학교를 찾을 수 없습니다.");
         error.status = 404;
         throw error;
     }
 
-    return region;
-}
-
-function groupSchoolsByRegionName(schools) {
-    const map = new Map();
-
-    for (const school of schools) {
-        const regionName = extractDistrict(school.address);
-
-        if (!regionName) continue;
-
-        if (!map.has(regionName)) {
-            map.set(regionName, []);
-        }
-
-        map.get(regionName).push(school);
-    }
-
-    return map;
-}
-
-async function getAllSchoolsGroupedByRegionName() {
-    const schools = await School.findAll({
-        attributes: [
-            "school_code",
-            "atpt_code",
-            "school_name",
-            "address",
-            "school_type",
-        ],
-        order: [["school_name", "ASC"]],
+    const rawSchedules = await fetchAcademicSchedulesFromNeis({
+        atptCode: school.atpt_code,
+        schoolCode: school.school_code,
+        year: String(year),
     });
 
-    return groupSchoolsByRegionName(schools);
-}
+    const schedules = rawSchedules
+        .filter((raw) => raw.AA_YMD && raw.EVENT_NM)
+        .map(normalizeAcademicSchedule)
+        .filter((schedule) => schedule.schedule_date);
 
-async function getSchoolsByRegionName(regionName) {
-    const schoolsByRegionName = await getAllSchoolsGroupedByRegionName();
-    return schoolsByRegionName.get(normalizeRegionName(regionName)) ?? [];
-}
-
-async function generateAverageScheduleByRegion({ regionName, year, schools }) {
-    const academicYear = resolveAcademicYear(year);
-    const region = await findRegionByName(regionName);
-
-    const targetSchools =
-        schools || (await getSchoolsByRegionName(region.region_name));
-
-    const schoolCodesByType = {
-        ELEMENTARY: [],
-        MIDDLE: [],
-    };
-
-    for (const school of targetSchools) {
-        const schoolType = normalizeSchoolType(school.school_type);
-
-        if (!schoolType) continue;
-
-        schoolCodesByType[schoolType].push(school.school_code);
-    }
-
-    let savedCount = 0;
-
-    for (const [schoolType, schoolCodes] of Object.entries(schoolCodesByType)) {
-        await AverageAcademicSchedule.destroy({
-            where: {
-                region_id: region.id,
-                school_type: schoolType,
-                academic_year: academicYear,
-            },
-        });
-
-        if (schoolCodes.length === 0) continue;
-
-        const schedules = await AcademicSchedule.findAll({
-            where: {
-                school_code: {
-                    [Op.in]: schoolCodes,
-                },
-                academic_year: academicYear,
-            },
-            order: [
-                ["schedule_date", "ASC"],
-                ["event_name", "ASC"],
+    if (schedules.length > 0) {
+        await AcademicSchedule.bulkCreate(schedules, {
+            updateOnDuplicate: [
+                "schedule_date",
+                "event_content",
+                "subtracted_day_name",
+                "one_grade_event_yn",
+                "tw_grade_event_yn",
+                "three_grade_event_yn",
+                "fr_grade_event_yn",
+                "fiv_grade_event_yn",
+                "six_grade_event_yn",
+                "neis_load_dtm",
+                "updated_at",
             ],
         });
-
-        const groups = groupSimilarEvents(schedules, 0.6);
-
-        const rows = groups
-            .filter((group) => group.events.length >= 2)
-            .map((group) => {
-                const avgDate = averageDate(group.events);
-
-                if (!avgDate) return null;
-
-                return {
-                    region_id: region.id,
-                    school_type: schoolType,
-                    academic_year: academicYear,
-                    average_date: avgDate,
-                    event_name: group.representativeName,
-                    one_grade_event_yn: hasAnyGradeEvent(
-                        group.events,
-                        "one_grade_event_yn",
-                    ),
-                    tw_grade_event_yn: hasAnyGradeEvent(
-                        group.events,
-                        "tw_grade_event_yn",
-                    ),
-                    three_grade_event_yn: hasAnyGradeEvent(
-                        group.events,
-                        "three_grade_event_yn",
-                    ),
-                    fr_grade_event_yn: hasAnyGradeEvent(
-                        group.events,
-                        "fr_grade_event_yn",
-                    ),
-                    fiv_grade_event_yn: hasAnyGradeEvent(
-                        group.events,
-                        "fiv_grade_event_yn",
-                    ),
-                    six_grade_event_yn: hasAnyGradeEvent(
-                        group.events,
-                        "six_grade_event_yn",
-                    ),
-                };
-            })
-            .filter(Boolean);
-
-        if (rows.length > 0) {
-            await AverageAcademicSchedule.bulkCreate(rows);
-            savedCount += rows.length;
-        }
     }
 
     return {
-        regionId: region.id,
-        regionName: region.region_name,
-        academicYear,
-        targetSchoolCount: targetSchools.length,
-        savedCount,
+        schoolCode: school.school_code,
+        atptCode: school.atpt_code,
+        year: String(year),
+        syncedCount: schedules.length,
     };
 }
 
-async function generateAllAverageSchedules({ year } = {}) {
-    const academicYear = resolveAcademicYear(year);
-
-    const regions = await Region.findAll({
-        order: [["id", "ASC"]],
-    });
-
-    const schoolsByRegionName = await getAllSchoolsGroupedByRegionName();
+async function syncAcademicSchedules({ schoolCode, year }) {
+    const years = year ? [String(year)] : getDefaultSyncYears();
 
     const results = [];
-    const failures = [];
+    const failedYears = [];
+    const errors = [];
 
-    for (const region of regions) {
+    for (const targetYear of years) {
         try {
-            const result = await generateAverageScheduleByRegion({
-                regionName: region.region_name,
-                year: academicYear,
-                schools: schoolsByRegionName.get(region.region_name) || [],
+            const result = await syncAcademicSchedulesBySchoolAndYear({
+                schoolCode,
+                year: targetYear,
             });
 
-            results.push(result);
+            results.push({
+                year: targetYear,
+                status: "success",
+                ...result,
+            });
         } catch (error) {
-            failures.push({
-                regionId: region.id,
-                regionName: region.region_name,
+            errors.push(error);
+            failedYears.push({
+                year: targetYear,
+                status: "failed",
                 reason: error.message,
             });
         }
     }
 
-    return {
-        academicYear,
-        successCount: results.length,
-        failedCount: failures.length,
-        savedCount: results.reduce((sum, result) => sum + result.savedCount, 0),
-        results,
-        failures,
-    };
-}
-
-async function getAverageSchedules({ regionName, year, grade }) {
-    assertValidGrade(grade);
-
-    const academicYear = resolveAcademicYear(year);
-    const region = await findRegionByName(regionName);
-
-    const where = {
-        region_id: region.id,
-        academic_year: academicYear,
-    };
-
-    const gradeColumn = getGradeColumn(grade);
-
-    if (gradeColumn) {
-        where[gradeColumn] = "Y";
+    if (results.length === 0 && errors.length > 0) {
+        throw errors[0];
     }
 
-    const rows = await AverageAcademicSchedule.findAll({
-        where,
-        order: [
-            ["average_date", "ASC"],
-            ["event_name", "ASC"],
-        ],
-    });
+    const syncedCount = results.reduce(
+        (sum, item) => sum + item.syncedCount,
+        0,
+    );
 
-    return rows.map(toResponse);
+    const status =
+        failedYears.length === 0
+            ? "success"
+            : results.length === 0
+              ? "failed"
+              : "partial";
+
+    return {
+        schoolCode,
+        years,
+        status,
+        syncedCount,
+        successCount: results.length,
+        failedCount: failedYears.length,
+        results,
+        failedYears,
+    };
 }
 
 module.exports = {
-    generateAverageScheduleByRegion,
-    generateAllAverageSchedules,
-    getAverageSchedules,
+    syncAcademicSchedules,
+    syncAcademicSchedulesBySchoolAndYear,
 };
