@@ -1,6 +1,16 @@
 // schedule-svc/src/utils/addressUtils.js
-function extractDistrict(address = "") {
-    const parts = address.trim().split(/\s+/);
+function extractDistrict(address) {
+    if (typeof address !== "string") {
+        return null;
+    }
+
+    const normalizedAddress = address.trim();
+
+    if (!normalizedAddress) {
+        return null;
+    }
+
+    const parts = normalizedAddress.split(/\s+/);
 
     const district = parts.find((part) => part.endsWith("구"));
     if (district) return district;
