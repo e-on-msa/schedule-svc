@@ -1,34 +1,54 @@
 // schedule-svc/src/utils/eventSimilarityUtils.js
-function normalizeEventName(name = "") {
-    return name
+
+const stringSimilarity = require("string-similarity");
+
+function normalizeEventName(value = "") {
+    return String(value || "")
         .replace(/\s+/g, "")
-        .replace(/[()（）\[\]{}]/g, "")
-        .replace(/-/g, "")
+        .replace(/[()（）[\]{}]/g, "")
+        .replace(/[-_/·ㆍ.]/g, "")
+        .replace(/행사/g, "")
         .trim();
 }
 
-function groupEventsByNormalizedName(events) {
-    const map = new Map();
+function groupSimilarEvents(events, threshold = 0.6) {
+    const groups = [];
 
     for (const event of events) {
-        const key = normalizeEventName(event.event_name);
+        const normalizedName = normalizeEventName(event.event_name);
 
-        if (!key) continue;
+        if (!normalizedName) continue;
 
-        if (!map.has(key)) {
-            map.set(key, {
-                title: event.event_name,
-                events: [],
-            });
+        let matchedGroup = null;
+
+        for (const group of groups) {
+            const similarity = stringSimilarity.compareTwoStrings(
+                normalizedName,
+                group.normalizedName,
+            );
+
+            if (similarity >= threshold) {
+                matchedGroup = group;
+                break;
+            }
         }
 
-        map.get(key).events.push(event);
+        if (matchedGroup) {
+            matchedGroup.events.push(event);
+            continue;
+        }
+
+        groups.push({
+            representativeName: event.event_name,
+            normalizedName,
+            events: [event],
+        });
     }
 
-    return Array.from(map.values());
+    return groups;
 }
 
 module.exports = {
     normalizeEventName,
-    groupEventsByNormalizedName,
+    groupSimilarEvents,
 };

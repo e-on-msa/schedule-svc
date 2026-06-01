@@ -1,4 +1,5 @@
 // schedule-svc/src/services/averageScheduleService.js
+
 const { Op } = require("sequelize");
 const {
     Region,
@@ -6,11 +7,12 @@ const {
     AcademicSchedule,
     AverageAcademicSchedule,
 } = require("../../models");
-const { extractDistrict } = require("../utils/addressUtils");
-const { normalizeAverageSchoolType } = require("../utils/schoolTypeUtils");
 const {
-    groupEventsByNormalizedName,
-} = require("../utils/eventSimilarityUtils");
+    extractDistrict,
+    normalizeRegionName,
+} = require("../utils/regionNormalizer");
+const { normalizeAverageSchoolType } = require("../utils/schoolTypeUtils");
+const { groupSimilarEvents } = require("../utils/eventSimilarityUtils");
 
 function getCurrentAcademicYear() {
     const today = new Date();
@@ -45,6 +47,18 @@ function getGradeColumn(grade) {
     };
 
     return gradeMap[String(grade)];
+}
+
+function assertValidGrade(grade) {
+    if (grade === undefined || grade === null || grade === "") {
+        return;
+    }
+
+    if (!getGradeColumn(grade)) {
+        const error = new Error("grade는 1~6 사이의 값이어야 합니다.");
+        error.status = 400;
+        throw error;
+    }
 }
 
 function toAverageScheduleResponse(row) {
@@ -94,11 +108,13 @@ function groupSchoolsByRegionName(schools) {
             continue;
         }
 
-        if (!map.has(regionName)) {
-            map.set(regionName, []);
+        const normalizedRegionName = normalizeRegionName(regionName);
+
+        if (!map.has(normalizedRegionName)) {
+            map.set(normalizedRegionName, []);
         }
 
-        map.get(regionName).push(school);
+        map.get(normalizedRegionName).push(school);
     }
 
     return map;
@@ -122,27 +138,35 @@ async function getAllSchoolsGroupedByRegionName() {
 async function getSchoolsByRegionName(regionName) {
     const schoolsByRegionName = await getAllSchoolsGroupedByRegionName();
 
-    return schoolsByRegionName.get(regionName) ?? [];
+    return schoolsByRegionName.get(normalizeRegionName(regionName)) ?? [];
 }
 
-async function generateAverageScheduleByRegion({ regionName, year, schools }) {
-    const academicYear = resolveAcademicYear(year);
+async function findRegionByName(regionName) {
+    const normalizedRegionName = normalizeRegionName(regionName);
 
     const region = await Region.findOne({
         where: {
-            region_name: regionName,
+            region_name: normalizedRegionName,
         },
     });
 
     if (!region) {
         const error = new Error(
-            `등록된 지역을 찾을 수 없습니다: ${regionName}`,
+            `등록된 지역을 찾을 수 없습니다: ${normalizedRegionName}`,
         );
         error.status = 404;
         throw error;
     }
 
-    const targetSchools = schools ?? (await getSchoolsByRegionName(regionName));
+    return region;
+}
+
+async function generateAverageScheduleByRegion({ regionName, year, schools }) {
+    const academicYear = resolveAcademicYear(year);
+    const region = await findRegionByName(regionName);
+
+    const targetSchools =
+        schools ?? (await getSchoolsByRegionName(region.region_name));
 
     const schoolCodesByType = {
         elementary: [],
@@ -150,18 +174,26 @@ async function generateAverageScheduleByRegion({ regionName, year, schools }) {
     };
 
     for (const school of targetSchools) {
-        const normalizedType = normalizeAverageSchoolType(school.school_type);
+        const schoolType = normalizeAverageSchoolType(school.school_type);
 
-        if (!normalizedType) {
+        if (!schoolType) {
             continue;
         }
 
-        schoolCodesByType[normalizedType].push(school.school_code);
+        schoolCodesByType[schoolType].push(school.school_code);
     }
 
     const rowsToSave = [];
 
     for (const [schoolType, schoolCodes] of Object.entries(schoolCodesByType)) {
+        await AverageAcademicSchedule.destroy({
+            where: {
+                region_id: region.id,
+                school_type: schoolType,
+                academic_year: academicYear,
+            },
+        });
+
         if (schoolCodes.length === 0) {
             continue;
         }
@@ -173,9 +205,13 @@ async function generateAverageScheduleByRegion({ regionName, year, schools }) {
                 },
                 academic_year: academicYear,
             },
+            order: [
+                ["schedule_date", "ASC"],
+                ["event_name", "ASC"],
+            ],
         });
 
-        const groupedEvents = groupEventsByNormalizedName(events);
+        const groupedEvents = groupSimilarEvents(events, 0.6);
 
         for (const group of groupedEvents) {
             if (group.events.length < 2) {
@@ -193,33 +229,27 @@ async function generateAverageScheduleByRegion({ regionName, year, schools }) {
                 school_type: schoolType,
                 academic_year: academicYear,
                 average_date: averageDate,
-                event_name: group.title,
-
+                event_name: group.representativeName,
                 one_grade_event_yn: getAnyGradeYn(
                     group.events,
                     "one_grade_event_yn",
                 ),
-
                 tw_grade_event_yn: getAnyGradeYn(
                     group.events,
                     "tw_grade_event_yn",
                 ),
-
                 three_grade_event_yn: getAnyGradeYn(
                     group.events,
                     "three_grade_event_yn",
                 ),
-
                 fr_grade_event_yn: getAnyGradeYn(
                     group.events,
                     "fr_grade_event_yn",
                 ),
-
                 fiv_grade_event_yn: getAnyGradeYn(
                     group.events,
                     "fiv_grade_event_yn",
                 ),
-
                 six_grade_event_yn: getAnyGradeYn(
                     group.events,
                     "six_grade_event_yn",
@@ -229,18 +259,7 @@ async function generateAverageScheduleByRegion({ regionName, year, schools }) {
     }
 
     if (rowsToSave.length > 0) {
-        await AverageAcademicSchedule.bulkCreate(rowsToSave, {
-            updateOnDuplicate: [
-                "average_date",
-                "one_grade_event_yn",
-                "tw_grade_event_yn",
-                "three_grade_event_yn",
-                "fr_grade_event_yn",
-                "fiv_grade_event_yn",
-                "six_grade_event_yn",
-                "updated_at",
-            ],
-        });
+        await AverageAcademicSchedule.bulkCreate(rowsToSave);
     }
 
     return {
@@ -253,6 +272,8 @@ async function generateAverageScheduleByRegion({ regionName, year, schools }) {
 }
 
 async function generateAllAverageSchedules({ year } = {}) {
+    const academicYear = resolveAcademicYear(year);
+
     const regions = await Region.findAll({
         order: [["id", "ASC"]],
     });
@@ -266,8 +287,11 @@ async function generateAllAverageSchedules({ year } = {}) {
         try {
             const result = await generateAverageScheduleByRegion({
                 regionName: region.region_name,
-                year,
-                schools: schoolsByRegionName.get(region.region_name) ?? [],
+                year: academicYear,
+                schools:
+                    schoolsByRegionName.get(
+                        normalizeRegionName(region.region_name),
+                    ) ?? [],
             });
 
             results.push({
@@ -285,20 +309,16 @@ async function generateAllAverageSchedules({ year } = {}) {
     }
 
     return {
-        academicYear: resolveAcademicYear(year),
-
+        academicYear,
         status:
             failures.length === 0
                 ? "success"
                 : results.length === 0
                   ? "failed"
                   : "partial",
-
         successCount: results.length,
         failedCount: failures.length,
-
         savedCount: results.reduce((sum, item) => sum + item.savedCount, 0),
-
         results,
         failures,
     };
@@ -308,16 +328,7 @@ async function getAverageScheduleByRegion({ regionName, year, grade }) {
     assertValidGrade(grade);
 
     const academicYear = resolveAcademicYear(year);
-
-    const region = await Region.findOne({
-        where: {
-            region_name: regionName,
-        },
-    });
-
-    if (!region) {
-        return [];
-    }
+    const region = await findRegionByName(regionName);
 
     const where = {
         region_id: region.id,
@@ -339,18 +350,6 @@ async function getAverageScheduleByRegion({ regionName, year, grade }) {
     });
 
     return rows.map(toAverageScheduleResponse);
-}
-
-function assertValidGrade(grade) {
-    if (grade === undefined || grade === null || grade === "") {
-        return;
-    }
-
-    if (!["1", "2", "3", "4", "5", "6"].includes(String(grade))) {
-        const error = new Error("grade는 1~6 사이의 값이어야 합니다.");
-        error.status = 400;
-        throw error;
-    }
 }
 
 module.exports = {
