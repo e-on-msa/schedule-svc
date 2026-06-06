@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.get("/", regionController.getAllRegions);
 router.get("/search", regionController.searchRegionsByName);
+router.get("/:id", regionController.getRegionById);
 
 module.exports = router;

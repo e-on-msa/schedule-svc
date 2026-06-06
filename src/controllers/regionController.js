@@ -48,8 +48,41 @@ async function syncRegions(req, res, next) {
     }
 }
 
+async function getRegionById(req, res, next) {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "유효하지 않은 지역 ID입니다.",
+            });
+        }
+
+        const region = await regionSyncService.getRegionById(id);
+
+        if (!region) {
+            return res.status(404).json({
+                success: false,
+                message: "지역을 찾을 수 없습니다.",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                region_id: region.id,
+                region_name: region.region_name,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getAllRegions,
     searchRegionsByName,
+    getRegionById,
     syncRegions,
 };
